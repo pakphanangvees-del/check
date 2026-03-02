@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ตรวจสอบสิทธิ์เลือกตั้ง - อาชีวศึกษาปากพนัง 2569</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Anuphan', 'sans-serif'] },
+                    colors: { brand: '#2563eb', brandDark: '#1e40af', dark: '#0f172a' }
+                }
+            }
+        }
+    </script>
+
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        body { 
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #bae6fd 100%); 
+            color: #1e293b; 
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .glass-panel { 
+            background: rgba(255, 255, 255, 0.85); 
+            backdrop-filter: blur(16px); 
+            border: 1px solid rgba(255, 255, 255, 0.5); 
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.1); 
+            border-radius: 1.5rem; 
+        }
+
+        .input-mega { 
+            width: 100%; 
+            padding: 1.25rem 1.5rem 1.25rem 3.5rem; 
+            font-size: 1.25rem; 
+            font-weight: 700;
+            letter-spacing: 0.05em; 
+            border-radius: 1rem; 
+            border: 2px solid #bae6fd; 
+            background: #ffffff; 
+            outline: none; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+        }
+        .input-mega:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); transform: translateY(-2px); }
+        
+        .btn-search { 
+            width: 100%; 
+            padding: 1.25rem; 
+            font-size: 1.25rem; 
+            font-weight: 700; 
+            border-radius: 1rem; 
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); 
+            color: white; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 0.5rem; 
+            transition: all 0.3s; 
+            border: none;
+            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
+        }
+        .btn-search:hover { transform: translateY(-3px); box-shadow: 0 15px 25px -5px rgba(37, 99, 235, 0.4); }
+        .btn-search:active { transform: translateY(0); }
+
+        /* แอนิเมชันตอนแสดงผลการค้นหา */
+        .result-card {
+            display: none;
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .result-card.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        /* Loading Spinner */
+        .loader {
+            display: none;
+            width: 48px;
+            height: 48px;
+            border: 5px solid #bfdbfe;
+            border-bottom-color: #2563eb;
+            border-radius: 50%;
+            animation: rotation 1s linear infinite;
+            margin: 2rem auto;
+        }
+        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Progress Bar Animation */
+        .progress-bar { transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1); }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <header class="w-full max-w-2xl mx-auto text-center mt-4 mb-8">
+        <div class="inline-flex items-center justify-center w-20 h-20 bg-white rounded-2xl shadow-lg mb-6 border border-slate-100 relative overflow-hidden">
+            <div class="absolute inset-0 bg-blue-50 opacity-50"></div>
+            <i class="ph-fill ph-check-box text-5xl text-brand relative z-10"></i>
+        </div>
+        <h1 class="text-2xl md:text-3xl font-black text-slate-800 leading-tight mb-2">ระบบตรวจสอบสิทธิ์เลือกตั้ง</h1>
+        <p class="text-slate-600 font-medium">คณะกรรมการนักเรียน อาชีวศึกษาปากพนัง 2569</p>
+    </header>
+
+    <main class="w-full max-w-2xl mx-auto space-y-6">
+        
+        <div class="glass-panel p-6 md:p-8">
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="font-bold text-slate-700 flex items-center gap-2">
+                    <i class="ph-duotone ph-chart-line-up text-xl text-brand"></i> ความคืบหน้าการใช้สิทธิ์
+                </h2>
+                <button onclick="fetchStats()" class="text-brand hover:text-brandDark text-sm font-bold flex items-center gap-1 bg-blue-50 px-3 py-1 rounded-full transition">
+                    <i class="ph-bold ph-arrows-clockwise"></i> อัปเดต
+                </button>
+            </div>
+            
+            <div class="flex items-end justify-between mt-6 mb-2">
+                <div>
+                    <p class="text-sm text-slate-500 font-medium mb-1">ผู้มาใช้สิทธิ์แล้ว</p>
+                    <div class="flex items-baseline gap-2">
+                        <span id="stat-voted" class="text-3xl font-black text-slate-800">0</span>
+                        <span class="text-slate-400 font-medium">/ <span id="stat-total">0</span> คน</span>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm text-slate-500 font-medium mb-1">คิดเป็น</p>
+                    <span id="stat-percent" class="text-2xl font-black text-brand">0%</span>
+                </div>
+            </div>
+            
+            <div class="w-full bg-slate-200 rounded-full h-3 overflow-hidden shadow-inner mt-2 relative">
+                <div id="progress-bar" class="progress-bar h-full bg-gradient-to-r from-blue-400 to-brand rounded-full" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div class="glass-panel p-6 md:p-8 relative z-10">
+            <h2 class="text-xl font-bold text-slate-800 mb-6 text-center">กรอกรหัสประจำตัวนักเรียนเพื่อตรวจสอบ</h2>
+            <form onsubmit="checkStatus(event)">
+                <div class="relative mb-6">
+                    <i class="ph-bold ph-identification-card absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-slate-400"></i>
+                    <input type="text" id="searchInput" class="input-mega text-brand" placeholder="ระบุรหัสนักเรียน" required autocomplete="off">
+                </div>
+                <button type="submit" class="btn-search">
+                    <i class="ph-bold ph-magnifying-glass text-xl"></i> ค้นหาข้อมูล
+                </button>
+            </form>
+        </div>
+
+        <div id="loadingIndicator" class="loader"></div>
+
+        <div id="resultCard" class="result-card glass-panel p-6 md:p-8 text-center mt-6">
+            </div>
+
+    </main>
+
+    <footer class="mt-auto py-8 text-center text-slate-500 text-sm font-medium">
+        &copy; 2569 อาชีวศึกษาปากพนัง | ข้อมูลอัปเดตแบบเรียลไทม์
+    </footer>
+
+    <script>
+        // ==========================================
+        // 1. ตั้งค่า Supabase
+        // ==========================================
+        const SUPABASE_URL = 'https://zrhomgsdpdkukzqtdrwq.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_PHWCKS6ZtGJ0pOVIW7kz_A_Q1JqxODq';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ==========================================
+        // 2. ดึงข้อมูลสถิติภาพรวม (Real-time Turnout)
+        // ==========================================
+        async function fetchStats() {
+            try {
+                // ดึงจำนวนผู้สิทธิ์ทั้งหมด
+                const { count: total } = await supabaseClient.from('students').select('*', { count: 'exact', head: true });
+                // ดึงจำนวนคนที่โหวตแล้ว
+                const { count: voted } = await supabaseClient.from('students').select('*', { count: 'exact', head: true }).eq('has_voted', true);
+                
+                const safeTotal = total || 0;
+                const safeVoted = voted || 0;
+                const percent = safeTotal > 0 ? ((safeVoted / safeTotal) * 100).toFixed(1) : 0;
+
+                // Animate ตัวเลข
+                animateValue("stat-voted", parseInt(document.getElementById('stat-voted').innerText) || 0, safeVoted, 1000);
+                document.getElementById('stat-total').innerText = safeTotal;
+                document.getElementById('stat-percent').innerText = percent + '%';
+                
+                // Animate หลอดโหลด
+                setTimeout(() => {
+                    document.getElementById('progress-bar').style.width = percent + '%';
+                }, 100);
+
+            } catch (error) {
+                console.error("Error fetching stats:", error);
+            }
+        }
+
+        // ฟังก์ชันทำให้ตัวเลขวิ่งดุ๊กดิ๊กตอนโหลด (เพื่อความจึ้ง)
+        function animateValue(id, start, end, duration) {
+            if (start === end) return;
+            const obj = document.getElementById(id);
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                obj.innerHTML = Math.floor(progress * (end - start) + start);
+                if (progress < 1) { window.requestAnimationFrame(step); }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        // ==========================================
+        // 3. ฟังก์ชันตรวจสอบสิทธิ์รายบุคคล
+        // ==========================================
+        async function checkStatus(event) {
+            event.preventDefault();
+            const studentId = document.getElementById('searchInput').value.trim();
+            const resultCard = document.getElementById('resultCard');
+            const loader = document.getElementById('loadingIndicator');
+
+            // ซ่อนผลลัพธ์เก่า โชว์โหลด
+            resultCard.classList.remove('active');
+            loader.style.display = 'block';
+
+            try {
+                const { data: student, error } = await supabaseClient
+                    .from('students')
+                    .select('*')
+                    .eq('student_id', studentId)
+                    .single();
+
+                // ปิดโหลด
+                loader.style.display = 'none';
+
+                if (error || !student) {
+                    showError("ไม่พบข้อมูล", `ไม่พบรหัสประจำตัว <strong>${studentId}</strong> ในระบบผู้มีสิทธิ์เลือกตั้ง`);
+                    return;
+                }
+
+                showResult(student);
+                
+                // เลื่อนหน้าจอลงมาดูผลลัพธ์แบบสมูท
+                setTimeout(() => {
+                    resultCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+
+            } catch (err) {
+                loader.style.display = 'none';
+                showError("ข้อผิดพลาด", "ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาลองใหม่");
+            }
+        }
+
+        // ==========================================
+        // 4. แสดงผลลัพธ์
+        // ==========================================
+        function showResult(student) {
+            const resultCard = document.getElementById('resultCard');
+            
+            // เลือกสีและไอคอนตามสถานะ has_voted
+            const isVoted = student.has_voted;
+            const statusColor = isVoted ? 'emerald' : 'amber';
+            const statusIcon = isVoted ? 'ph-check-circle' : 'ph-clock-countdown';
+            const statusTitle = isVoted ? 'ใช้สิทธิ์เรียบร้อยแล้ว' : 'ยังไม่ได้ใช้สิทธิ์';
+            const statusMessage = isVoted 
+                ? 'ขอบคุณที่ร่วมเป็นส่วนหนึ่งในระบอบประชาธิปไตย' 
+                : 'กรุณาไปใช้สิทธิ์ที่คูหาเลือกตั้งตามเวลาที่กำหนด';
+
+            resultCard.innerHTML = `
+                <div class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-${statusColor}-100 text-${statusColor}-500 mb-6 shadow-inner border-4 border-white">
+                    <i class="ph-fill ${statusIcon} text-6xl"></i>
+                </div>
+                
+                <h3 class="text-2xl font-black text-slate-800 mb-2">${student.first_name} ${student.last_name}</h3>
+                <p class="text-slate-500 font-medium mb-6">รหัสประจำตัว: <span class="text-slate-800 font-bold">${student.student_id}</span> | ระดับชั้น: <span class="text-slate-800 font-bold">${student.grade_level} (${student.room})</span></p>
+                
+                <div class="bg-${statusColor}-50 border border-${statusColor}-200 rounded-xl p-5">
+                    <h4 class="text-xl font-bold text-${statusColor}-700 mb-1">${statusTitle}</h4>
+                    <p class="text-sm text-${statusColor}-600 font-medium">${statusMessage}</p>
+                </div>
+                
+                <button onclick="closeResult()" class="mt-6 text-sm font-bold text-slate-400 hover:text-slate-600 transition underline">
+                    ค้นหารหัสอื่น
+                </button>
+            `;
+
+            // เปิดให้แสดงผล
+            resultCard.classList.add('active');
+            
+            // ถ้าพึ่งโหวตไป จะได้อัปเดตสถิติด้านบนด้วย
+            fetchStats();
+        }
+
+        function showError(title, message) {
+            const resultCard = document.getElementById('resultCard');
+            resultCard.innerHTML = `
+                <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-red-50 text-red-500 mb-4 border-4 border-white">
+                    <i class="ph-fill ph-x-circle text-5xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-800 mb-2">${title}</h3>
+                <p class="text-slate-600 font-medium">${message}</p>
+                <button onclick="closeResult()" class="mt-6 text-sm font-bold text-slate-400 hover:text-slate-600 transition underline">
+                    ค้นหาอีกครั้ง
+                </button>
+            `;
+            resultCard.classList.add('active');
+        }
+
+        function closeResult() {
+            document.getElementById('resultCard').classList.remove('active');
+            document.getElementById('searchInput').value = '';
+            document.getElementById('searchInput').focus();
+        }
+
+        // โหลดข้อมูลสถิติทันทีที่เปิดหน้าเว็บ
+        fetchStats();
+    </script>
+
+</body>
+</html>
